@@ -27,6 +27,8 @@
 
 class BunkerNews < Sinatra::Application
 
+  class HTMLGen
+
     ###############################################################################
     # Navigation, header and footer.
     ###############################################################################
@@ -104,5 +106,5 @@ class BunkerNews < Sinatra::Application
             }.select{|l| l}.join(" | ")
         }+apisecret+keyboardnavigation
     end
-
+  end
 end
