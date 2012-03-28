@@ -41,7 +41,7 @@ require './lib/comments'
 require './lib/utilities'
 
 
-Version = "0.9.3"
+Version = "0.0.1"
 
 class BunkerNews < Sinatra::Application
 

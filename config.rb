@@ -1,6 +1,6 @@
 # General
-SiteName = "Lamer News"
-SiteUrl = "http://lamernews.com"
+SiteName = "Bunker News"
+SiteUrl = "http://artilect.info"
 
 # Redis config
 RedisHost = "127.0.0.1"

@@ -28,6 +28,8 @@
 class BunkerNews < Sinatra::Application
 
     get '/' do
+        redirect "/login" unless $user
+
         H.set_title "Top News - #{SiteName}"
         news,numitems = get_top_news
         H.page {
@@ -35,6 +37,8 @@ class BunkerNews < Sinatra::Application
         }
     end
 
+    # This poses a problem. Nice to have, but how to make it private?
+    #
     get '/rss' do
         content_type 'text/xml', :charset => 'utf-8'
         news,count = get_latest_news
@@ -55,10 +59,14 @@ class BunkerNews < Sinatra::Application
     end
 
     get '/latest' do
-        redirect '/latest/0'
+      redirect "/login" unless $user
+
+      redirect '/latest/0'
     end
 
     get '/latest/:start' do
+      redirect "/login" unless $user
+
         start = params[:start].to_i
         H.set_title "Latest news - #{SiteName}"
         paginate = {
@@ -71,7 +79,7 @@ class BunkerNews < Sinatra::Application
             :link => "/latest/$"
         }
         H.page {
-            H.h2 {"Latest news"}
+            H.h2 {"Latest news"}+
             H.section(:id => "newslist") {
                 list_items(paginate)
             }
@@ -100,6 +108,8 @@ class BunkerNews < Sinatra::Application
     end
 
     get '/usercomments/:username/:start' do
+      redirect "/login" unless $user
+
         start = params[:start].to_i
         user = get_user_by_username(params[:username])
         halt(404,"Non existing user") if !user
@@ -147,13 +157,36 @@ class BunkerNews < Sinatra::Application
         H.page {
             H.div(:id => "login") {
                 H.form(:name=>"f") {
-                    H.label(:for => "username") {"username"}+
-                    H.inputtext(:id => "username", :name => "username")+
-                    H.label(:for => "password") {"password"}+
-                    H.inputpass(:id => "password", :name => "password")+H.br+
-                    H.checkbox(:name => "register", :value => "1")+
-                    "create account"+H.br+
-                    H.submit(:name => "do_login", :value => "Login")
+                    H.h2 { "Login" }+
+                    H.ul do
+                      H.li { H.input(:id => "username", :name => "username", :placeholder => "Username") }+
+                      H.li { H.input(:type => "password", :id => "password", :name => "password", :placeholder => "Password") }+
+                      H.li(:class=>"submit") { H.input(:type => "submit", :name => "do_login", :value => "Login") }
+                      # H.li { H.checkbox(:name => "register", :value => "1") }
+                    end
+                }
+            }+
+            H.div(:id => "errormsg"){}+
+            H.script() {'
+                $(function() {
+                    $("form[name=f]").submit(login);
+                });
+            '}
+        }
+    end
+
+    get '/you_have_been_forbnitzed' do
+        H.set_title "Welcome to #{SiteName}!"
+        H.page {
+            H.div(:id => "login") {
+                H.form(:name=>"f") {
+                    H.h2 { "Welcome!" }+
+                    H.ul do
+                      H.li { H.input(:id => "username", :name => "username", :placeholder => "Username") }+
+                      H.li { H.input(:type => "password", :id => "password", :name => "password", :placeholder => "Password") }+
+                      H.li(:class=>"submit") { H.input(:type => "submit", :name => "do_login", :value => "Create account") }
+                    end+
+                    H.input(:name => "register", :value => "1", :type => "hidden" )
                 }
             }+
             H.div(:id => "errormsg"){}+
@@ -172,16 +205,11 @@ class BunkerNews < Sinatra::Application
             H.h2 {"Submit a new story"}+
             H.div(:id => "submitform") {
                 H.form(:name=>"f") {
-                    H.inputhidden(:name => "news_id", :value => -1)+
-                    H.label(:for => "title") {"title"}+
-                    H.inputtext(:id => "title", :name => "title", :size => 80, :value => (params[:t] ? H.entities(params[:t]) : ""))+H.br+
-                    H.label(:for => "url") {"url"}+H.br+
-                    H.inputtext(:id => "url", :name => "url", :size => 60, :value => (params[:u] ? H.entities(params[:u]) : ""))+H.br+
-                    "or if you don't have an url type some text"+
-                    H.br+
-                    H.label(:for => "text") {"text"}+
-                    H.textarea(:id => "text", :name => "text", :cols => 60, :rows => 10) {}+
-                    H.button(:name => "do_submit", :value => "Submit")
+                    H.input(:type => "hidden", :name => "news_id", :value => -1)+
+                    H.input(:placeholder => "Title", :id => "title", :name => "title", :size => 80, :value => (params[:t] ? H.entities(params[:t]) : ""))+H.br+
+                    H.input(:placeholder => "URL...", :id => "url", :name => "url", :size => 60, :value => (params[:u] ? H.entities(params[:u]) : ""))+H.br+
+                    H.textarea(:placeholder => "...or your own post", :id => "text", :name => "text", :cols => 60, :rows => 10) {}+
+                    H.input(:type => "submit", :name => "do_submit", :value => "Submit")
                 }
             }+
             H.div(:id => "errormsg"){}+
@@ -209,6 +237,7 @@ class BunkerNews < Sinatra::Application
     end
 
     get "/news/:news_id" do
+      redirect "/login" unless $user
         news = get_news_by_id(params["news_id"])
         halt(404,"404 - This news does not exist.") if !news
         # Show the news text if it is a news without URL.
@@ -231,13 +260,15 @@ class BunkerNews < Sinatra::Application
                 news_to_html(news)
             }+top_comment+
             if $user
-                H.form(:name=>"f") {
-                    H.inputhidden(:name => "news_id", :value => news["id"])+
-                    H.inputhidden(:name => "comment_id", :value => -1)+
-                    H.inputhidden(:name => "parent_id", :value => -1)+
-                    H.textarea(:name => "comment", :cols => 60, :rows => 10) {}+H.br+
-                    H.button(:name => "post_comment", :value => "Send comment")
-                }+H.div(:id => "errormsg"){}
+                H.div(:id => "create_comment") {
+                  H.form(:name=>"f" ) {
+                      H.inputhidden(:name => "news_id", :value => news["id"])+
+                      H.inputhidden(:name => "comment_id", :value => -1)+
+                      H.inputhidden(:name => "parent_id", :value => -1)+
+                      H.textarea(:name => "comment") {}+H.br+
+                      H.input(:type => "submit", :name => "post_comment", :value => "Send comment")
+                  }+H.div(:id => "errormsg"){}
+                }
             else
                 H.br
             end +
@@ -251,6 +282,7 @@ class BunkerNews < Sinatra::Application
     end
 
     get "/comment/:news_id/:comment_id" do
+      redirect "/login" unless $user
         news = get_news_by_id(params["news_id"])
         halt(404,"404 - This news does not exist.") if !news
         comment = Comments.fetch(params["news_id"],params["comment_id"])
@@ -285,18 +317,20 @@ class BunkerNews < Sinatra::Application
         H.page {
             news_to_html(news)+
             comment_to_html(comment,user)+
-            H.form(:name=>"f") {
-                H.inputhidden(:name => "news_id", :value => news["id"])+
-                H.inputhidden(:name => "comment_id", :value => -1)+
-                H.inputhidden(:name => "parent_id", :value => params["comment_id"])+
-                H.textarea(:name => "comment", :cols => 60, :rows => 10) {}+H.br+
-                H.button(:name => "post_comment", :value => "Reply")
-            }+H.div(:id => "errormsg"){}+
-            H.script() {'
-                $(function() {
-                    $("input[name=post_comment]").click(post_comment);
-                });
-            '}
+            H.div(:id => "create_comment") {
+              H.form(:name=>"f") {
+                  H.inputhidden(:name => "news_id", :value => news["id"])+
+                  H.inputhidden(:name => "comment_id", :value => -1)+
+                  H.inputhidden(:name => "parent_id", :value => params["comment_id"])+
+                  H.textarea(:name => "comment", :cols => 60, :rows => 10) {}+H.br+
+                  H.input(:type => "submit", :name => "post_comment", :value => "Reply")
+              }+H.div(:id => "errormsg"){}+
+              H.script() {'
+                  $(function() {
+                      $("input[name=post_comment]").click(post_comment);
+                  });
+              '}
+            }
         }
     end
 
@@ -378,6 +412,7 @@ class BunkerNews < Sinatra::Application
     end
 
     get "/user/:username" do
+      redirect "/login" unless $user
         user = get_user_by_username(params[:username])
         halt(404,"Non existing user") if !user
         posted_news,posted_comments = $r.pipelined {
@@ -416,21 +451,14 @@ class BunkerNews < Sinatra::Application
                     }
                 }
             }+if owner
-                H.br+H.form(:name=>"f") {
-                    H.label(:for => "email") {
-                        "email (not visible, used for gravatar)"
-                    }+H.br+
+                H.form(:name=>"f", :id => "usersettings" ) {
                     H.inputtext(:id => "email", :name => "email", :size => 40,
-                                :value => H.entities(user['email']))+H.br+
-                    H.label(:for => "password") {
-                        "change password (optional)"
-                    }+H.br+
-                    H.inputpass(:name => "password", :size => 40)+H.br+
-                    H.label(:for => "about") {"about"}+H.br+
-                    H.textarea(:id => "about", :name => "about", :cols => 60, :rows => 10){
+                                :value => H.entities(user['email']), :placeholder => "Email (not visible, used for gravatar)")+H.br+
+                    H.inputpass(:name => "password", :size => 40, :type => "password", :placeholder => "New password" )+H.br+
+                    H.textarea(:id => "about", :name => "about", :cols => 60, :rows => 10, :placeholder => "About..."){
                         H.entities(user['about'])
                     }+H.br+
-                    H.button(:name => "update_profile", :value => "Update profile")
+                    H.input(:type => "submit", :name => "update_profile", :value => "Update profile")
                 }+
                 H.div(:id => "errormsg"){}+
                 H.script() {'

@@ -61,20 +61,23 @@ class BunkerNews < Sinatra::Application
             if $user
                 H.a(:href => "/user/"+H.urlencode($user['username'])) { 
                     H.entities $user['username']+" (#{$user['karma']})"
-                }+" | "+
+                }+
                 H.a(:href =>
                     "/logout?apisecret=#{$user['apisecret']}") {
                     "logout"
                 }
             else
-                H.a(:href => "/login") {"login / register"}
+                H.a(:href => "/login") {"Login"}
             end
         }
         H.header {
-            H.h1 {
-                H.a(:href => "/") {H.entities SiteName}+" "+
-                H.small {Version}
-            }+navbar+" "+rnavbar
+          header = H.nav {
+            H.a(:href => "/", :class => "icon") { H.img(:src => "/images/favicon_invert.png" ) }
+          }
+          if $user
+            header << navbar
+          end
+          header << rnavbar
         }
     end
 
@@ -93,18 +96,18 @@ class BunkerNews < Sinatra::Application
         else
             keyboardnavigation = ""
         end
-        H.footer {
+        footer = H.footer {
             links = [
-                ["source code", "http://github.com/antirez/lamernews"],
+                ["source code", "http://github.com/artilect/bunkernews"],
                 ["rss feed", "/rss"],
                 ["twitter", FooterTwitterLink],
                 ["google group", FooterGoogleGroupLink]
             ]
-            links.map{|l| l[1] ?
-                H.a(:href => l[1]) {H.entities l[0]} :
-                nil
-            }.select{|l| l}.join(" | ")
+            H.nav {
+              links.map{ |l| l[1] ? H.a(:href => l[1]) {H.entities l[0]} : nil }.select{ |l| l }.join(" ")
+            }
         }+apisecret+keyboardnavigation
+        $user ? footer : ""
     end
   end
 end
