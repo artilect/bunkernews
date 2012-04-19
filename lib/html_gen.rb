@@ -96,19 +96,19 @@ class BunkerNews < Sinatra::Application
       end
 
       def entities(s)
-          CGI::escapeHTML(s)
+          CGI::escapeHTML(s.force_encoding('utf-8'))
       end
 
       def unentities(s)
-          CGI::unescapeHTML(s)
+          CGI::unescapeHTML(s.force_encoding('utf-8'))
       end
 
       def urlencode(s)
-          CGI::escape(s)
+          CGI::escape(s.force_encoding('utf-8'))
       end
 
       def urldecode(s)
-          CGI::unescape(s)
+          CGI::unescape(s.force_encoding('utf-8'))
       end
 
       def _header()
