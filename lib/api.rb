@@ -128,7 +128,7 @@ class BunkerNews < Sinatra::Application
                   "please wait #{allowed_to_post_in_seconds} seconds."
               }.to_json
           end
-          news_id = insert_news(params[:title],params[:url],params[:text],
+          news_id = insert_news(params[:title].force_encoding('utf-8'),params[:url],params[:text].force_encoding('utf-8'),
                                 $user["id"])
       else
           news_id = edit_news(params[:news_id],params[:title],params[:url],
