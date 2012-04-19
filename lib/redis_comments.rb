@@ -43,7 +43,7 @@ class RedisComments
         key = thread_key(thread_id)
         json = @r.hget(key,comment_id)
         return nil if !json
-        json = JSON.parse(json)
+        json = JSON.parse(json.force_encoding('utf-8'))
         json['thread_id'] = thread_id.to_i
         json['id'] = comment_id.to_i
         json
@@ -86,7 +86,7 @@ class RedisComments
         byparent = {}
         @r.hgetall(thread_key(thread_id)).each{|id,comment|
             next if id == "nextid"
-            c = JSON.parse(comment)
+            c = JSON.parse(comment.force_encoding('utf-8'))
             c['id'] = id.to_i
             c['thread_id'] = thread_id.to_i
             parent_id = c['parent_id'].to_i
